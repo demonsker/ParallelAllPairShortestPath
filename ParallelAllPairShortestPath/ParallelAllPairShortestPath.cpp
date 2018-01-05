@@ -7,7 +7,8 @@
 #define INF 999999
 #define SIZE 2048
 
-void initialize(int **);
+void generate(int **);
+void initialize(int **, int **);
 void findAllPairShortestPath(int **, int);
 int getSizePerProcess(int);
 int getBeginIndexFromInput();
@@ -62,7 +63,7 @@ int main(int argc, char** argv) {
 		}
 
 		//Generate data
-		initialize(data);
+		generate(data);
 
 		//After gen time
 		system("@echo after generate %time%");
@@ -99,6 +100,7 @@ int main(int argc, char** argv) {
 
 	MPI_Finalize();
 }
+
 void findAllPairShortestPath(int **graph, int n)
 {
 	//k = number of pass node
@@ -149,6 +151,39 @@ void findAllPairShortestPath(int **graph, int n)
 	//printf("Processor : %d\n",rank);
 	//Print(graph,n);
 }
+
+void generate(int **data)
+{
+	int i, j, r;
+
+	for (i = 0; i < SIZE; i++)
+	{
+		data[i][i] = 0;
+		for (j = i + 1; j < SIZE; j++)
+		{
+			r = (rand() % 20) + 1;
+			if (r == 19)
+				data[i][j] = INF;
+			else
+				data[i][j] = r;
+			data[j][i] = data[i][j];
+		}
+	}
+}
+
+void initialize(int **sour, int **dest)
+{
+	int i, j;
+
+	for (i = 0; i < SIZE; i++)
+	{
+		for (j = 0; j < SIZE; j++)
+		{
+			dest[j][i] = sour[i][j];
+		}
+	}
+}
+
 void printProcess(int **distance, int n)
 {
 	printf("Shortest distances between every pair of vertices: \n");
@@ -185,25 +220,6 @@ void print(int **m)
 	}
 }
 
-void initialize(int **data)
-{
-	int i, j, r;
-
-	for (i = 0; i < SIZE; i++)
-	{
-		data[i][i] = 0;
-		for (j = i + 1; j < SIZE; j++)
-		{
-			r = (rand() % 20) + 1;
-			if (r == 19)
-				data[i][j] = INF;
-			else
-				data[i][j] = r;
-			data[j][i] = data[i][j];
-		}
-	}
-
-}
 int getSizePerProcess(int rank)
 {
 	int n = SIZE / world_size;
@@ -228,3 +244,28 @@ int getBeginIndexFromInput()
 	}
 	return -1;
 }
+
+void useExampleData(int **data)
+{
+	int example[SIZE][SIZE] = {
+		{ 0,1,9,3,INF,INF,INF,INF },
+		{ 1,0,INF,1,INF,3,INF,INF },
+		{ 9,INF,0,INF,INF,3,10,INF },
+		{ 3,1,INF,0,5,INF,INF,8 },
+		{ INF,INF,INF,5,0,2,2,1 },
+		{ INF,3,3,INF,2,0,INF,INF },
+		{ INF,INF,10,INF,2,INF,0,4 },
+		{ INF,INF,INF,8,1,INF,4,0 }
+	};
+
+	int i, j;
+
+	for (i = 0; i < SIZE; i++)
+	{
+		for (j = 0; j < SIZE; j++)
+		{
+			data[i][j] = example[i][j];
+		}
+	}
+}
+
