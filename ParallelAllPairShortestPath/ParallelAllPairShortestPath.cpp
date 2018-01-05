@@ -5,18 +5,22 @@
 #include <stdlib.h>
 
 #define INF 999999
-#define SIZE 2048
+#define SIZE 8
 
-void initialize(int **);
-void FloydWarshall(int **, int);
-int getn(int);
-int getPos();
-void Print(int **, int n);
-void PrintF(int **);
+void generate(int **);
+void initialize(int **, int **);
+void findAllPairShortestPath(int **, int);
+int getSizePerProcess(int);
+int getBeginIndexFromInput();
+void printProcess(int **, int n);
+void print(int **);
+void useExampleData(int **);
 
 int world_size, world_rank;
 
 int main(int argc, char** argv) {
+	//Before setup MPI
+	system("@echo Before setup %time%");
 
 	// Initialize the MPI environment
 	MPI_Init(NULL, NULL);
@@ -27,8 +31,8 @@ int main(int argc, char** argv) {
 	// Get the rank of the process
 	MPI_Comm_rank(MPI_COMM_WORLD, &world_rank);
 
-	//Data per processor
-	int n = getn(world_rank);
+	//Number of row per processor
+	int n = getSizePerProcess(world_rank);
 
 	//create memory for receive
 	int i;
@@ -37,21 +41,12 @@ int main(int argc, char** argv) {
 	for (i = 0; i < n + 1; i++)
 	{
 		mpart[i] = (int*)malloc(SIZE * sizeof(int));
-	}
+	}	
 
-	//Slave
-	if (world_rank != 0)
+	//Master
+	if (world_rank == 0)
 	{
-		//receive data from master
-		for (i = 0; i <= n; i++)
-			MPI_Recv(mpart[i], SIZE, MPI_INT, 0, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
-	}
-	else //Master
-	{
-		//Before gen time
-		system("@echo before generate %time%");
-
-		//declare input
+		//declare data for generate
 		int **data;
 		data = (int**)malloc(SIZE * sizeof(int*));
 		int i, j;
@@ -60,52 +55,74 @@ int main(int argc, char** argv) {
 			data[i] = (int*)malloc(SIZE * sizeof(int));
 		}
 
-		//Generate data
-		initialize(data);
+		//After setup
+		system("@echo After setup %time%");
 
-		//After gen time
-		system("@echo after generate %time%");
+		//Generate data
+		//generate(data);
+		useExampleData(data);
+
+		//Start time
+		system("@echo Start %time%");
+
+		//declare input
+		int **distance;
+		distance = (int**)malloc(SIZE * sizeof(int*));
+		for (i = 0; i < SIZE; i++)
+		{
+			distance[i] = (int*)malloc(SIZE * sizeof(int));
+		}
+
+		initialize(data, distance);
 
 		//Send data partition to another processor
 		int begin, end, np;
-		end = getn(0);
+		end = getSizePerProcess(0);
 		for (i = 1; i < world_size; i++)
 		{
-			np = getn(i);
+			np = getSizePerProcess(i);
 			begin = end;
 			end = begin + np;
-			MPI_Send(data[0], SIZE, MPI_INT, i, 0, MPI_COMM_WORLD);
+			MPI_Send(distance[0], SIZE, MPI_INT, i, 0, MPI_COMM_WORLD);
 			for (j = begin; j < end; j++)
-				MPI_Send(data[j], SIZE, MPI_INT, i, 0, MPI_COMM_WORLD);
+				MPI_Send(distance[j], SIZE, MPI_INT, i, 0, MPI_COMM_WORLD);
 		}
-
 		//partition data for master 
 		for (i = 0; i < n; i++)
 			for (j = 0; j < SIZE; j++)
 			{
 				if (i == 0)
-					mpart[0][j] = data[0][j];
-				mpart[i + 1][j] = data[i][j];
+					mpart[0][j] = distance[0][j];
+				mpart[i + 1][j] = distance[i][j];
 			}
 	}
-
-
+	//Slave
+	else
+	{
+		//receive data from master
+		for (i = 0; i <= n; i++)
+			MPI_Recv(mpart[i], SIZE, MPI_INT, 0, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+	}
+	
 	//Find shrotest path
-	FloydWarshall(mpart, n);
+	findAllPairShortestPath(mpart, n);
 
 	//Finish time
 	system("@echo Finish %time%");
 
+	printProcess(mpart, n);
+
 	MPI_Finalize();
 }
-void FloydWarshall(int **graph, int n)
+
+void findAllPairShortestPath(int **graph, int n)
 {
 	//k = number of pass node
 	int k = 0;
 
 	//get postion of data from input
-	int begin = getPos();
-	int end = begin + getn(world_rank);
+	int begin = getBeginIndexFromInput();
+	int end = begin + getSizePerProcess(world_rank);
 
 	//Loop when k < SIZE
 	while (1)
@@ -148,9 +165,42 @@ void FloydWarshall(int **graph, int n)
 	//printf("Processor : %d\n",rank);
 	//Print(graph,n);
 }
-void Print(int **distance, int n)
+
+void generate(int **data)
 {
-	printf("Shortest distances between every pair of vertices: \n");
+	int i, j, r;
+
+	for (i = 0; i < SIZE; i++)
+	{
+		data[i][i] = 0;
+		for (j = i + 1; j < SIZE; j++)
+		{
+			r = (rand() % 20) + 1;
+			if (r == 19)
+				data[i][j] = INF;
+			else
+				data[i][j] = r;
+			data[j][i] = data[i][j];
+		}
+	}
+}
+
+void initialize(int **sour, int **dest)
+{
+	int i, j;
+
+	for (i = 0; i < SIZE; i++)
+	{
+		for (j = 0; j < SIZE; j++)
+		{
+			dest[j][i] = sour[i][j];
+		}
+	}
+}
+
+void printProcess(int **distance, int n)
+{
+	printf("Shortest distances of Process %d \n",world_rank);
 
 	for (int i = 1; i <= n; ++i)
 	{
@@ -166,7 +216,7 @@ void Print(int **distance, int n)
 	}
 }
 
-void PrintF(int **m)
+void print(int **m)
 {
 	printf("Shortest distances between every pair of vertices: \n");
 
@@ -184,26 +234,7 @@ void PrintF(int **m)
 	}
 }
 
-void initialize(int **data)
-{
-	int i, j, r;
-
-	for (i = 0; i < SIZE; i++)
-	{
-		data[i][i] = 0;
-		for (j = i + 1; j < SIZE; j++)
-		{
-			r = (rand() % 20) + 1;
-			if (r == 19)
-				data[i][j] = INF;
-			else
-				data[i][j] = r;
-			data[j][i] = data[i][j];
-		}
-	}
-
-}
-int getn(int rank)
+int getSizePerProcess(int rank)
 {
 	int n = SIZE / world_size;
 	int m = SIZE % world_size;
@@ -212,17 +243,42 @@ int getn(int rank)
 			n++;
 	return n;
 }
-int getPos()
+int getBeginIndexFromInput()
 {
 	if (world_rank == 0) return 0;
 	int begin, end, np, i;
-	end = getn(0);
+	end = getSizePerProcess(0);
 	for (i = 1; i < world_size; i++)
 	{
-		np = getn(i);
+		np = getSizePerProcess(i);
 		begin = end;
 		end = begin + np;
-		if (world_rank == i) return begin;
+		if (world_rank == i) 
+			return begin;
 	}
 	return -1;
+}
+
+void useExampleData(int **data)
+{
+	int example[SIZE][SIZE] = {
+		{ 0,1,9,3,INF,INF,INF,INF },
+		{ 1,0,INF,1,INF,3,INF,INF },
+		{ 9,INF,0,INF,INF,3,10,INF },
+		{ 3,1,INF,0,5,INF,INF,8 },
+		{ INF,INF,INF,5,0,2,2,1 },
+		{ INF,3,3,INF,2,0,INF,INF },
+		{ INF,INF,10,INF,2,INF,0,4 },
+		{ INF,INF,INF,8,1,INF,4,0 }
+	};
+
+	int i, j;
+
+	for (i = 0; i < SIZE; i++)
+	{
+		for (j = 0; j < SIZE; j++)
+		{
+			data[i][j] = example[i][j];
+		}
+	}
 }
