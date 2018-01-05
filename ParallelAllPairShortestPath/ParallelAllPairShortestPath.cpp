@@ -9,9 +9,9 @@
 
 void initialize(int **);
 void findAllPairShortestPath(int **, int);
-int getn(int);
-int getPos();
-void printProcessor(int **, int n);
+int getSizePerProcess(int);
+int getBeginIndexFromInput();
+void printProcess(int **, int n);
 void print(int **);
 
 int world_size, world_rank;
@@ -28,7 +28,7 @@ int main(int argc, char** argv) {
 	MPI_Comm_rank(MPI_COMM_WORLD, &world_rank);
 
 	//Number of row per processor
-	int n = getn(world_rank);
+	int n = getSizePerProcess(world_rank);
 
 	//create memory for receive
 	int i;
@@ -69,10 +69,10 @@ int main(int argc, char** argv) {
 
 		//Send data partition to another processor
 		int begin, end, np;
-		end = getn(0);
+		end = getSizePerProcess(0);
 		for (i = 1; i < world_size; i++)
 		{
-			np = getn(i);
+			np = getSizePerProcess(i);
 			begin = end;
 			end = begin + np;
 			MPI_Send(data[0], SIZE, MPI_INT, i, 0, MPI_COMM_WORLD);
@@ -105,8 +105,8 @@ void findAllPairShortestPath(int **graph, int n)
 	int k = 0;
 
 	//get postion of data from input
-	int begin = getPos();
-	int end = begin + getn(world_rank);
+	int begin = getBeginIndexFromInput();
+	int end = begin + getSizePerProcess(world_rank);
 
 	//Loop when k < SIZE
 	while (1)
@@ -149,7 +149,7 @@ void findAllPairShortestPath(int **graph, int n)
 	//printf("Processor : %d\n",rank);
 	//Print(graph,n);
 }
-void printProcessor(int **distance, int n)
+void printProcess(int **distance, int n)
 {
 	printf("Shortest distances between every pair of vertices: \n");
 
@@ -204,7 +204,7 @@ void initialize(int **data)
 	}
 
 }
-int getn(int rank)
+int getSizePerProcess(int rank)
 {
 	int n = SIZE / world_size;
 	int m = SIZE % world_size;
@@ -213,17 +213,18 @@ int getn(int rank)
 			n++;
 	return n;
 }
-int getPos()
+int getBeginIndexFromInput()
 {
 	if (world_rank == 0) return 0;
 	int begin, end, np, i;
-	end = getn(0);
+	end = getSizePerProcess(0);
 	for (i = 1; i < world_size; i++)
 	{
-		np = getn(i);
+		np = getSizePerProcess(i);
 		begin = end;
 		end = begin + np;
-		if (world_rank == i) return begin;
+		if (world_rank == i) 
+			return begin;
 	}
 	return -1;
 }
