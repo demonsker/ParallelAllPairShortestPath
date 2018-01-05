@@ -36,11 +36,11 @@ int main(int argc, char** argv) {
 
 	//create memory for receive
 	int i;
-	int **mpart;
-	mpart = (int**)malloc((n + 1) * sizeof(int*));
+	int **partOfDistance;
+	partOfDistance = (int**)malloc((n + 1) * sizeof(int*));
 	for (i = 0; i < n + 1; i++)
 	{
-		mpart[i] = (int*)malloc(SIZE * sizeof(int));
+		partOfDistance[i] = (int*)malloc(SIZE * sizeof(int));
 	}	
 
 	//Master
@@ -76,15 +76,16 @@ int main(int argc, char** argv) {
 		initialize(dataGen, distance);
 
 		//Send data partition to another processor
-		int begin, end, np;
-		end = getSizePerProcess(0);
+		int rowBegin, rowEnd, numberOfRow;
+
+		rowEnd = getSizePerProcess(0);
 		for (i = 1; i < world_size; i++)
 		{
-			np = getSizePerProcess(i);
-			begin = end;
-			end = begin + np;
+			numberOfRow = getSizePerProcess(i);
+			rowBegin = rowEnd;
+			rowEnd = rowBegin + numberOfRow;
 			MPI_Send(distance[0], SIZE, MPI_INT, i, 0, MPI_COMM_WORLD);
-			for (j = begin; j < end; j++)
+			for (j = rowBegin; j < rowEnd; j++)
 				MPI_Send(distance[j], SIZE, MPI_INT, i, 0, MPI_COMM_WORLD);
 		}
 
@@ -93,8 +94,8 @@ int main(int argc, char** argv) {
 			for (j = 0; j < SIZE; j++)
 			{
 				if (i == 0)
-					mpart[0][j] = distance[0][j];
-				mpart[i + 1][j] = distance[i][j];
+					partOfDistance[0][j] = distance[0][j];
+				partOfDistance[i + 1][j] = distance[i][j];
 			}
 	}
 	//Slave
@@ -102,16 +103,16 @@ int main(int argc, char** argv) {
 	{
 		//receive data from master
 		for (i = 0; i <= n; i++)
-			MPI_Recv(mpart[i], SIZE, MPI_INT, 0, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+			MPI_Recv(partOfDistance[i], SIZE, MPI_INT, 0, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
 	}
 	
 	//Find shrotest path
-	findAllPairShortestPath(mpart, n);
+	findAllPairShortestPath(partOfDistance, n);
 
 	//Finish time
 	system("@echo Finish %time%");
 
-	printProcess(mpart, n);
+	printProcess(partOfDistance, n);
 
 	MPI_Finalize();
 }
@@ -122,8 +123,8 @@ void findAllPairShortestPath(int **graph, int n)
 	int k = 0;
 
 	//get postion of data from input
-	int begin = getBeginIndexFromInput();
-	int end = begin + getSizePerProcess(world_rank);
+	int rowBegin = getBeginIndexFromInput();
+	int rowEnd = rowBegin + getSizePerProcess(world_rank);
 
 	//Loop when k < SIZE
 	while (1)
@@ -142,10 +143,10 @@ void findAllPairShortestPath(int **graph, int n)
 		if (++k >= SIZE) break;
 
 		//Find processor that must send pass node data
-		if (k >= begin && k < end)
+		if (k >= rowBegin && k < rowEnd)
 		{
 			// index of pass node data
-			int index = k - begin + 1;
+			int index = k - rowBegin + 1;
 
 			int  j, r;
 
