@@ -8,11 +8,11 @@
 #define SIZE 2048
 
 void initialize(int **);
-void FloydWarshall(int **, int);
+void findAllPairShortestPath(int **, int);
 int getn(int);
 int getPos();
-void Print(int **, int n);
-void PrintF(int **);
+void printProcessor(int **, int n);
+void print(int **);
 
 int world_size, world_rank;
 
@@ -27,7 +27,7 @@ int main(int argc, char** argv) {
 	// Get the rank of the process
 	MPI_Comm_rank(MPI_COMM_WORLD, &world_rank);
 
-	//Data per processor
+	//Number of row per processor
 	int n = getn(world_rank);
 
 	//create memory for receive
@@ -46,7 +46,8 @@ int main(int argc, char** argv) {
 		for (i = 0; i <= n; i++)
 			MPI_Recv(mpart[i], SIZE, MPI_INT, 0, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
 	}
-	else //Master
+	//Master
+	else 
 	{
 		//Before gen time
 		system("@echo before generate %time%");
@@ -91,14 +92,14 @@ int main(int argc, char** argv) {
 
 
 	//Find shrotest path
-	FloydWarshall(mpart, n);
+	findAllPairShortestPath(mpart, n);
 
 	//Finish time
 	system("@echo Finish %time%");
 
 	MPI_Finalize();
 }
-void FloydWarshall(int **graph, int n)
+void findAllPairShortestPath(int **graph, int n)
 {
 	//k = number of pass node
 	int k = 0;
@@ -148,7 +149,7 @@ void FloydWarshall(int **graph, int n)
 	//printf("Processor : %d\n",rank);
 	//Print(graph,n);
 }
-void Print(int **distance, int n)
+void printProcessor(int **distance, int n)
 {
 	printf("Shortest distances between every pair of vertices: \n");
 
@@ -166,7 +167,7 @@ void Print(int **distance, int n)
 	}
 }
 
-void PrintF(int **m)
+void print(int **m)
 {
 	printf("Shortest distances between every pair of vertices: \n");
 
