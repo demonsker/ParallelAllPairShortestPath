@@ -19,6 +19,8 @@ void useExampleData(int **);
 int world_size, world_rank;
 
 int main(int argc, char** argv) {
+	//Before setup MPI
+	system("@echo Before setup %time%");
 
 	// Initialize the MPI environment
 	MPI_Init(NULL, NULL);
@@ -39,15 +41,12 @@ int main(int argc, char** argv) {
 	for (i = 0; i < n + 1; i++)
 	{
 		mpart[i] = (int*)malloc(SIZE * sizeof(int));
-	}
+	}	
 
 	//Master
 	if (world_rank == 0)
 	{
-		//Before gen time
-		system("@echo before generate %time%");
-
-		//declare input
+		//declare data for generate
 		int **data;
 		data = (int**)malloc(SIZE * sizeof(int*));
 		int i, j;
@@ -56,12 +55,25 @@ int main(int argc, char** argv) {
 			data[i] = (int*)malloc(SIZE * sizeof(int));
 		}
 
+		//After setup
+		system("@echo After setup %time%");
+
 		//Generate data
 		//generate(data);
 		useExampleData(data);
 
-		//After gen time
-		system("@echo after generate %time%");
+		//Start time
+		system("@echo Start %time%");
+
+		//declare input
+		int **distance;
+		distance = (int**)malloc(SIZE * sizeof(int*));
+		for (i = 0; i < SIZE; i++)
+		{
+			distance[i] = (int*)malloc(SIZE * sizeof(int));
+		}
+
+		initialize(data, distance);
 
 		//Send data partition to another processor
 		int begin, end, np;
@@ -71,17 +83,17 @@ int main(int argc, char** argv) {
 			np = getSizePerProcess(i);
 			begin = end;
 			end = begin + np;
-			MPI_Send(data[0], SIZE, MPI_INT, i, 0, MPI_COMM_WORLD);
+			MPI_Send(distance[0], SIZE, MPI_INT, i, 0, MPI_COMM_WORLD);
 			for (j = begin; j < end; j++)
-				MPI_Send(data[j], SIZE, MPI_INT, i, 0, MPI_COMM_WORLD);
+				MPI_Send(distance[j], SIZE, MPI_INT, i, 0, MPI_COMM_WORLD);
 		}
 		//partition data for master 
 		for (i = 0; i < n; i++)
 			for (j = 0; j < SIZE; j++)
 			{
 				if (i == 0)
-					mpart[0][j] = data[0][j];
-				mpart[i + 1][j] = data[i][j];
+					mpart[0][j] = distance[0][j];
+				mpart[i + 1][j] = distance[i][j];
 			}
 	}
 	//Slave
