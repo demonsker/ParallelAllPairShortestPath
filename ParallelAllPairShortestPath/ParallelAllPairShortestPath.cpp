@@ -5,7 +5,7 @@
 #include <stdlib.h>
 
 #define INF 999999
-#define SIZE 2048
+#define SIZE 8
 
 void generate(int **);
 void initialize(int **, int **);
@@ -14,6 +14,7 @@ int getSizePerProcess(int);
 int getBeginIndexFromInput();
 void printProcess(int **, int n);
 void print(int **);
+void useExampleData(int **);
 
 int world_size, world_rank;
 
@@ -40,15 +41,8 @@ int main(int argc, char** argv) {
 		mpart[i] = (int*)malloc(SIZE * sizeof(int));
 	}
 
-	//Slave
-	if (world_rank != 0)
-	{
-		//receive data from master
-		for (i = 0; i <= n; i++)
-			MPI_Recv(mpart[i], SIZE, MPI_INT, 0, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
-	}
 	//Master
-	else 
+	if (world_rank == 0)
 	{
 		//Before gen time
 		system("@echo before generate %time%");
@@ -63,7 +57,8 @@ int main(int argc, char** argv) {
 		}
 
 		//Generate data
-		generate(data);
+		//generate(data);
+		useExampleData(data);
 
 		//After gen time
 		system("@echo after generate %time%");
@@ -80,7 +75,6 @@ int main(int argc, char** argv) {
 			for (j = begin; j < end; j++)
 				MPI_Send(data[j], SIZE, MPI_INT, i, 0, MPI_COMM_WORLD);
 		}
-
 		//partition data for master 
 		for (i = 0; i < n; i++)
 			for (j = 0; j < SIZE; j++)
@@ -90,13 +84,21 @@ int main(int argc, char** argv) {
 				mpart[i + 1][j] = data[i][j];
 			}
 	}
-
-
+	//Slave
+	else
+	{
+		//receive data from master
+		for (i = 0; i <= n; i++)
+			MPI_Recv(mpart[i], SIZE, MPI_INT, 0, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+	}
+	
 	//Find shrotest path
 	findAllPairShortestPath(mpart, n);
 
 	//Finish time
 	system("@echo Finish %time%");
+
+	printProcess(mpart, n);
 
 	MPI_Finalize();
 }
@@ -186,7 +188,7 @@ void initialize(int **sour, int **dest)
 
 void printProcess(int **distance, int n)
 {
-	printf("Shortest distances between every pair of vertices: \n");
+	printf("Shortest distances of Process %d \n",world_rank);
 
 	for (int i = 1; i <= n; ++i)
 	{
@@ -268,4 +270,3 @@ void useExampleData(int **data)
 		}
 	}
 }
-
