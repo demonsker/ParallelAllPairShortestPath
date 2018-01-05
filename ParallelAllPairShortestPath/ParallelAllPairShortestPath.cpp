@@ -47,12 +47,12 @@ int main(int argc, char** argv) {
 	if (world_rank == 0)
 	{
 		//declare data for generate
-		int **data;
-		data = (int**)malloc(SIZE * sizeof(int*));
+		int **dataGen;
+		dataGen = (int**)malloc(SIZE * sizeof(int*));
 		int i, j;
 		for (i = 0; i < SIZE; i++)
 		{
-			data[i] = (int*)malloc(SIZE * sizeof(int));
+			dataGen[i] = (int*)malloc(SIZE * sizeof(int));
 		}
 
 		//After setup
@@ -60,7 +60,7 @@ int main(int argc, char** argv) {
 
 		//Generate data
 		//generate(data);
-		useExampleData(data);
+		useExampleData(dataGen);
 
 		//Start time
 		system("@echo Start %time%");
@@ -73,7 +73,7 @@ int main(int argc, char** argv) {
 			distance[i] = (int*)malloc(SIZE * sizeof(int));
 		}
 
-		initialize(data, distance);
+		initialize(dataGen, distance);
 
 		//Send data partition to another processor
 		int begin, end, np;
@@ -87,6 +87,7 @@ int main(int argc, char** argv) {
 			for (j = begin; j < end; j++)
 				MPI_Send(distance[j], SIZE, MPI_INT, i, 0, MPI_COMM_WORLD);
 		}
+
 		//partition data for master 
 		for (i = 0; i < n; i++)
 			for (j = 0; j < SIZE; j++)
