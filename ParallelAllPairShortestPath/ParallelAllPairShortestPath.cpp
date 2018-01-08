@@ -34,14 +34,23 @@ int main(int argc, char** argv) {
 	//Number of row per processor
 	int n = getSizePerProcess(world_rank);
 
-	//create memory for receive
-	int i;
+	//create memory for receive distance
+	int i,j;
 	int **partOfDistance;
 	partOfDistance = (int**)malloc((n + 1) * sizeof(int*));
 	for (i = 0; i < n + 1; i++)
 	{
 		partOfDistance[i] = (int*)malloc(SIZE * sizeof(int));
 	}	
+
+	int **partOfPath;
+	partOfPath = (int**)malloc((n + 1) * sizeof(int*));
+	for (i = 0; i < n + 1; i++)
+	{
+		partOfPath[i] = (int*)malloc(SIZE * sizeof(int));
+		for (j = 0; j < SIZE; j++)
+			partOfPath[i][j] = j;
+	}
 
 	//Master
 	if (world_rank == 0)
@@ -112,7 +121,11 @@ int main(int argc, char** argv) {
 	//Finish time
 	system("@echo Finish %time%");
 
+	printf("Process %d : Distance\n", world_rank);
 	printProcess(partOfDistance, n);
+
+	printf("Process %d : Path\n", world_rank);
+	printProcess(partOfPath, n);
 
 	MPI_Finalize();
 }
@@ -135,7 +148,9 @@ void findAllPairShortestPath(int **graph, int n)
 			for (int j = 0; j < SIZE; j++)
 			{
 				if (graph[i][k] + graph[0][j] < graph[i][j])
+				{
 					graph[i][j] = graph[i][k] + graph[0][j];
+				}
 			}
 		}
 
