@@ -9,7 +9,7 @@
 
 void generate(int **);
 void initialize(int **, int **);
-void findAllPairShortestPath(int **, int);
+void findAllPairShortestPath(int **, int **, int);
 int getSizePerProcess(int);
 int getBeginIndexFromInput();
 void printProcess(int **, int n);
@@ -34,14 +34,24 @@ int main(int argc, char** argv) {
 	//Number of row per processor
 	int n = getSizePerProcess(world_rank);
 
-	//create memory for receive
-	int i;
+	//create memory for receive distance
+	int i,j;
 	int **partOfDistance;
 	partOfDistance = (int**)malloc((n + 1) * sizeof(int*));
 	for (i = 0; i < n + 1; i++)
 	{
 		partOfDistance[i] = (int*)malloc(SIZE * sizeof(int));
 	}	
+
+	//ceate memory for receive path
+	int **partOfPath;
+	partOfPath = (int**)malloc((n + 1) * sizeof(int*));
+	for (i = 0; i < n + 1; i++)
+	{
+		partOfPath[i] = (int*)malloc(SIZE * sizeof(int));
+		for (j = 0; j < SIZE; j++)
+			partOfPath[i][j] = j;
+	}
 
 	//Master
 	if (world_rank == 0)
@@ -107,17 +117,21 @@ int main(int argc, char** argv) {
 	}
 	
 	//Find shrotest path
-	findAllPairShortestPath(partOfDistance, n);
+	findAllPairShortestPath(partOfDistance, partOfPath, n);
 
 	//Finish time
 	system("@echo Finish %time%");
 
+	printf("Process %d : Distance\n", world_rank);
 	printProcess(partOfDistance, n);
+
+	printf("Process %d : Path\n", world_rank);
+	printProcess(partOfPath, n);
 
 	MPI_Finalize();
 }
 
-void findAllPairShortestPath(int **graph, int n)
+void findAllPairShortestPath(int **graph,int **path, int n)
 {
 	//k = number of pass node
 	int k = 0;
@@ -135,7 +149,10 @@ void findAllPairShortestPath(int **graph, int n)
 			for (int j = 0; j < SIZE; j++)
 			{
 				if (graph[i][k] + graph[0][j] < graph[i][j])
+				{
 					graph[i][j] = graph[i][k] + graph[0][j];
+					path[i][j] = path[i][k];
+				}
 			}
 		}
 
@@ -153,7 +170,10 @@ void findAllPairShortestPath(int **graph, int n)
 			//send pass node data to another processor
 			for (r = 0; r < world_size; r++)
 				if (r != world_rank) //not send to itself
+				{
 					MPI_Send(graph[index], SIZE, MPI_INT, r, 0, MPI_COMM_WORLD);
+					MPI_Send(path[index], SIZE, MPI_INT, r, 0, MPI_COMM_WORLD);
+				}
 
 			//update pass node data self
 			for (j = 0; j < SIZE; j++)
@@ -162,6 +182,7 @@ void findAllPairShortestPath(int **graph, int n)
 		else
 		{	//receive pass node data
 			MPI_Recv(graph[0], SIZE, MPI_INT, MPI_ANY_SOURCE, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+			MPI_Recv(path[0], SIZE, MPI_INT, MPI_ANY_SOURCE, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
 		}
 	}
 	//printf("Processor : %d\n",rank);
@@ -202,8 +223,6 @@ void initialize(int **sour, int **dest)
 
 void printProcess(int **distance, int n)
 {
-	printf("Shortest distances of Process %d \n",world_rank);
-
 	for (int i = 1; i <= n; ++i)
 	{
 		for (int j = 0; j < SIZE; ++j)
