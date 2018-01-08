@@ -43,6 +43,7 @@ int main(int argc, char** argv) {
 		partOfDistance[i] = (int*)malloc(SIZE * sizeof(int));
 	}	
 
+	//ceate memory for receive path
 	int **partOfPath;
 	partOfPath = (int**)malloc((n + 1) * sizeof(int*));
 	for (i = 0; i < n + 1; i++)
@@ -222,8 +223,6 @@ void initialize(int **sour, int **dest)
 
 void printProcess(int **distance, int n)
 {
-	printf("Shortest distances of Process %d \n",world_rank);
-
 	for (int i = 1; i <= n; ++i)
 	{
 		for (int j = 0; j < SIZE; ++j)
