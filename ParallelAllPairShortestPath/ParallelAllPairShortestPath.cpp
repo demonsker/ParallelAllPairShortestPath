@@ -3,9 +3,10 @@
 #include "stdafx.h"
 #include <mpi.h>
 #include <stdlib.h>
+#include <string.h>
 
 #define INF 999999
-#define SIZE 8
+#define SIZE 8192
 
 void generate(int **);
 void initialize(int **, int **);
@@ -19,11 +20,14 @@ void useExampleData(int **);
 int world_size, world_rank;
 
 int main(int argc, char** argv) {
-	//Before setup MPI
-	system("@echo Before setup %time%");
+	
+	double start1, end1 , start2, end2;
 
 	// Initialize the MPI environment
 	MPI_Init(NULL, NULL);
+
+	//Before setup
+	start1 = MPI_Wtime();
 
 	// Get the number of processes
 	MPI_Comm_size(MPI_COMM_WORLD, &world_size);
@@ -66,14 +70,14 @@ int main(int argc, char** argv) {
 		}
 
 		//After setup
-		system("@echo After setup %time%");
+		end1 = MPI_Wtime();
 
 		//Generate data
-		//generate(data);
-		useExampleData(dataGen);
+		generate(dataGen);
+		//useExampleData(dataGen);
 
-		//Start time
-		system("@echo Start %time%");
+		//Start calculate
+		start2 = MPI_Wtime();
 
 		//declare input
 		int **distance;
@@ -119,14 +123,41 @@ int main(int argc, char** argv) {
 	//Find shrotest path
 	findAllPairShortestPath(partOfDistance, partOfPath, n);
 
-	//Finish time
-	system("@echo Finish %time%");
+	//End calculate
+	end2 = MPI_Wtime();
 
-	printf("Process %d : Distance\n", world_rank);
-	printProcess(partOfDistance, n);
+	//printf("Process %d : Distance\n", world_rank);
+	//printProcess(partOfDistance, n);
 
-	printf("Process %d : Path\n", world_rank);
-	printProcess(partOfPath, n);
+	//printf("Process %d : Path\n", world_rank);
+	//printProcess(partOfPath, n);
+	
+	float diff = (float)(end1 - start1 + end2 - start2);
+	printf("Time : %.4f\n", diff);
+
+	if(world_rank > 0)
+		MPI_Send(&diff, 1, MPI_FLOAT, 0, 0, MPI_COMM_WORLD);
+	else 
+	{
+		float temp;
+		for (i = 1; i < world_size; i++)
+		{
+			MPI_Recv(&temp, 1, MPI_FLOAT, i, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+			if (temp > diff)
+				diff = temp;
+		}
+		printf("Finish Time : %.4f\n", diff);
+
+		FILE * fp;
+		char fileName[10];
+		char filePath[70] = "C:\\Users\\EucliwoodX\\Desktop\\stat\\Parallel\\";
+
+		sprintf(fileName, "%d.txt", SIZE);
+		strcat(filePath, fileName);
+		fp = fopen(filePath, "a");
+		fprintf(fp, "%d Process\n %.4f\n\n", world_size, diff);
+		fclose(fp);		
+	}
 
 	MPI_Finalize();
 }
@@ -282,7 +313,7 @@ int getBeginIndexFromInput()
 
 void useExampleData(int **data)
 {
-	int example[SIZE][SIZE] = {
+	int example[8][8] = {
 		{ 0,1,9,3,INF,INF,INF,INF },
 		{ 1,0,INF,1,INF,3,INF,INF },
 		{ 9,INF,0,INF,INF,3,10,INF },
