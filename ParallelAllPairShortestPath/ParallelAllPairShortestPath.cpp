@@ -6,7 +6,7 @@
 #include <string.h>
 
 #define INF 999999
-#define SIZE 8192
+#define SIZE 32768
 
 void generate(int **);
 void initialize(int **, int **);
@@ -150,7 +150,7 @@ int main(int argc, char** argv) {
 
 		FILE * fp;
 		char fileName[10];
-		char filePath[70] = "C:\\Users\\EucliwoodX\\Desktop\\stat\\Parallel\\";
+		char filePath[70] = "C:\\Users\\EucliwoodX\\Desktop\\stat(SaveMode)\\Parallel\\";
 
 		sprintf(fileName, "%d.txt", SIZE);
 		strcat(filePath, fileName);
