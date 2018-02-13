@@ -60,6 +60,9 @@ int main(int argc, char** argv) {
 	//Master
 	if (world_rank == 0)
 	{
+		//After setup
+		end1 = MPI_Wtime();
+		
 		//declare data for generate
 		int **dataGen;
 		dataGen = (int**)malloc(SIZE * sizeof(int*));
@@ -68,9 +71,6 @@ int main(int argc, char** argv) {
 		{
 			dataGen[i] = (int*)malloc(SIZE * sizeof(int));
 		}
-
-		//After setup
-		end1 = MPI_Wtime();
 
 		//Generate data
 		generate(dataGen);
