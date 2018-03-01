@@ -5,7 +5,7 @@
 
 #define PATH "C:\\Users\\Eucliwood\\Desktop\\stat(SaveMode)\\Parallel\\"
 #define INF 999999
-#define SIZE 16384
+#define SIZE 4096
 
 void distance_generate(int[][SIZE]);
 void distance_useexample(int[][SIZE]);
@@ -103,7 +103,7 @@ int main(int argc, char** argv) {
 	//process_print(part_of_distance, row_per_process);
 
 	//printf("Process %d : Path\n", world_rank);
-	//process_printpartOfPath, n);
+	//process_print(part_of_path, row_per_process);
 	
 	float diff = (float)(end_1 - start_1 + end_2 - start_2);
 	printf("Time : %.4f\n", diff);
@@ -154,7 +154,6 @@ void find_AllPairShortestPath(int part_of_distance[][SIZE],int part_of_path[][SI
 				if (r != world_rank) //not send to itself
 				{
 					MPI_Send(part_of_distance[index], SIZE, MPI_INT, r, 0, MPI_COMM_WORLD);
-					MPI_Send(part_of_path[index], SIZE, MPI_INT, r, 0, MPI_COMM_WORLD);
 				}
 
 			//update pass node data self
@@ -164,7 +163,6 @@ void find_AllPairShortestPath(int part_of_distance[][SIZE],int part_of_path[][SI
 		else
 		{	//receive pass node data
 			MPI_Recv(part_of_distance[0], SIZE, MPI_INT, MPI_ANY_SOURCE, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
-			MPI_Recv(part_of_path[0], SIZE, MPI_INT, MPI_ANY_SOURCE, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
 		}
 	}
 }
